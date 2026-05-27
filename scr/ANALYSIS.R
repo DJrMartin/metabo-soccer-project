@@ -82,8 +82,8 @@ for (i in 1:6){
   SPRINT = cbind(SPRINT,sprint)
 }
 
-### TD
-png("figures/figure1.png", width = 4000, height = 4000, res = 600, type = "cairo")
+### TD ############ PANEL A
+svg("figures/figure1.svg", width = 7, height = 7)
 layout(matrix(c(1, 1, 2, 3), nrow=2, byrow = T))
 
 par(mar=c(5,5,2,2))
@@ -127,8 +127,8 @@ text(1.5, 10700, xpd=NA, "***", cex=2)
 t.test(new_data$Total.Distance ~ new_data$VO2max>=55.565)
 dev.off()
 
-### HIR
-png("figures/figure2.png", width = 4000, height = 4000, res = 600, type = "cairo")
+### HIR ############ PANEL B
+svg("figures/figure2.svg", width = 7, height = 7)
 layout(matrix(c(1,1,
                 2,3), nrow=2, byrow = T))
 par(mar=c(5,5,2,2))
@@ -160,7 +160,7 @@ abline(model<-lm(data_1$`High Intensity Running (> 15 km/h)` ~ MFO, data = data_
 cor.test(data_1$`High Intensity Running (> 15 km/h)`, data_1$MFO)
 text(0.6, 1200, expression(paste(r, ": 0.4, ", r^2, ": 0.16, p=0.006")), cex = 0.8, pos = 4)
 
-par(mar=c(4,4,3,2))
+par(mar=c(4,6,3,2))
 boxplot(data_1$`High Intensity Running (> 15 km/h)` ~ data_1$MFO>=0.728, ylim = c(1200, 2600),
         xlab = expression("MFO" ~ "(" * g * "." * min^{-1} * ")"), 
         ylab = expression("High-Intensity Running (speed > 15" ~ km * "." * h^{-1} ~ "in m)"), 
@@ -172,16 +172,17 @@ text(1.5, 2700, xpd = NA, "**", cex = 2)
 t.test(var2 ~ new_data$MFO>=0.728)
 dev.off()
 
-# SPRINTING
-png("figures/figure3.png", width = 4000, height = 4000, res = 600, type = "cairo")
+# SPRINTING ############ PANEL C
+svg("figures/figure3.svg", width = 7, height = 7)
 layout(matrix(c(1,1,1,1,
                 2,2,3,4), nrow=2, byrow = T))
 par(mar=c(6,6,2,2))
 plot(NA, xlim=c(0.5,(6+.5)), ylim=c(-1,1),
      axes=F, xlab="", ylab="95% confidence interval of\nthe correlation coefficients", 
-     main=expression("Sprinting (speed > 25" ~ km * "." * h^{-1} ~ "in meters)"))
+     main=expression("Sprinting (speed > 25" ~ km * "." * h^{-1} ~ "in meters)"), 
+     cex.lab = 1.2, cex.main = 1.5)
 abline(h=0, col="black", lty='dashed')
-axis(2)
+axis(2, cex.axis = 1.2)
 bornes_inf = apply(SPRINT,2,quantile,probs=.025)
 bornes_sup = apply(SPRINT,2,quantile,probs=.975)
 medianes = apply(SPRINT,2,quantile,probs=.5)
@@ -191,37 +192,39 @@ X.Y=X.Y[which(is.na(X.Y[,2])==F),]
 segments(X.Y$x1, X.Y$y1, X.Y$x2, X.Y$y2, lwd=2)
 points(x=1:6,y=medianes, lwd=3, cex=2 , pch=18, col='grey')
 
-axis(1, at=1:6, labels= rep("", 6))
+axis(1, at=1:6, labels= rep("", 6), cex.axis = 1.2)
 text(x=1.1:6.1, y=-1.25, c("MFO", "VO2max", "PmaxH", "MFO:VO2max","MFO:PmaxH","VO2max:PmaxH"), 
      xpd=NA, srt=45, pos=2)
 summary(lm(var3 ~ interact.2))
 summary(lm(var3 ~ new_data$MFO))
 
-par(mar=c(2,2,2,2))
+par(mar=c(2,3,2,2))
 model <- gam(Sprinting....25.km.h. ~ s(PmaxH, by=MFO, sp=2), data=new_data)
 vis.gam(model, theta = 320, n.grid = 20, lwd = 0.2, color = "gray",
-        zlab = "Sprinting")
+        zlab = "Sprinting", 
+        cex.lab = 1.2)
 
-par(mar=c(4,4,2,2))
+par(mar=c(4,5,2,2))
 model.tree <- rpart(data_1$`Sprinting (> 25 km/h)` ~ ., maxdepth = 1, data = data_1[, c(1:3)])
 model.tree
 
 boxplot(data_1$`Sprinting (> 25 km/h)` ~ data_1$MFO>=0.698, 
         xlab = expression("MFO" ~ "(" * g * "." * min^{-1} * ")"), 
-        ylab = expression("Sprinting (speed > 25" ~ km * "." * h^{-1} ~ "in meters)"), axes=F, col=c("grey"))
-axis(2)
+        ylab = expression("Sprinting (speed > 25" ~ km * "." * h^{-1} ~ "in meters)"), axes=F, col=c("grey"), 
+        cex.lab = 1.2)
+axis(2, cex.axis = 1.2)
 axis(1, at=1:2, labels=c("<0.7", ">0.7"))
 segments(x0=1,x1=2,y0=290, xpd=NA, lwd=2)
 text(c(1.5), 300, xpd = NA, "*", cex = 1.5)
 wilcox.test(data_1$`Sprinting (> 25 km/h)` ~ data_1$MFO>=0.698)
 
-par(mar=c(4,4,2,2))
 boxplot(data_1$`Sprinting (> 25 km/h)` ~ data_1$PmaxH>=18.88, 
         xlab = expression("PmaxH" ~ "(" * W * "." * kg^{-1} * ")"), 
-        ylab = expression("Sprinting (speed > 25" ~ km * "." * h^{-1} ~ "in meters)"), axes=F, col=c("grey"))
-axis(2)
+        ylab = expression("Sprinting (speed > 25" ~ km * "." * h^{-1} ~ "in meters)"), axes=F, col=c("grey"), 
+        cex.lab = 1.2, cex.axis = 1.2)
+axis(2, cex.axis = 1.2)
 axis(1, at = 1:2, labels = c("<19",">19"))
 segments(x0 = 1, x1 = 2, y0 = 290, xpd = NA, lwd = 2)
-text(c(1.5), 300, xpd=NA, "p=0.10", cex = 1)
+text(c(1.5), 300, xpd=NA, "p=0.10", cex = 1.2)
 wilcox.test(data_1$`Sprinting (> 25 km/h)` ~ data_1$PmaxH>=18.88)
 dev.off()

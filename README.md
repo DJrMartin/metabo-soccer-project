@@ -46,4 +46,4 @@ physical performance during matches.
 
 ## SCR
 
-The R script is used to create the Figure 1.
+The R script is used to create the Figure 2.
