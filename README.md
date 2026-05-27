@@ -1,9 +1,3 @@
----
-editor_options: 
-  markdown: 
-    wrap: 72
----
-
 # Maximal Fat Oxidation and High-Intensity Running Performance in Elite Players
 
 ## ABSTRACT

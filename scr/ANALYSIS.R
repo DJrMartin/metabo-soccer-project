@@ -11,15 +11,36 @@ df_standardized <- read.csv("data/STANDARDIZED_DATA.csv",
 data <- df_standardized[, c(3,4,7,11:13)]
 
 ## Outliers detection : 2nd methode
-res.pca <- FactoMineR::PCA(data[,1:3])
-outliers <- c(which(res.pca$ind$contrib[,2]>15), which(res.pca$ind$contrib[,1]>15), which(res.pca$ind$contrib[,3]>15))
-outliers <- c(11,12,36)
+library(robustbase)
 
-res.pca <- FactoMineR::PCA(data[,1:3], ind.sup = outliers)
-c(which(res.pca$ind$contrib[,2]>12), which(res.pca$ind$contrib[,1]>12))
+combinaisons <- list(c(1,3), c(2:3), c(1:2))
+for(i in 1:3){
+  X <- data[,combinaisons[[i]]]
+  
+  mcd <- covMcd(X)
+  
+  # distance de Mahalanobis robuste
+  D2 <- mahalanobis(
+    X,
+    center = mcd$center,
+    cov = mcd$cov
+  )
+  
+  cutoff <- qchisq(
+    0.99,
+    df = ncol(X)
+  )
+  
+  print(which(D2 > cutoff))
+}
+outliers <- c(11, 12, 36)
 
 ## J'enleve les outliers
 data <- data[-outliers,]
+data_1 = read.csv("data/RAW_DATA.csv", 
+                  sep=',', dec=".", 
+                  check.names=F, fileEncoding = "LATIN1")[-c(outliers),c(3,4,7,11,16,17)]
+
 # data <- data
 var1 = scale(data$`Total Distance`)
 var2 = scale(data$`High Intensity Running (> 15 km/h)`)
@@ -62,8 +83,9 @@ for (i in 1:6){
 }
 
 ### TD
-layout(matrix(c(1,1,
-                2,3), nrow=2, byrow = T))
+png("figures/figure1.png", width = 4000, height = 4000, res = 600, type = "cairo")
+layout(matrix(c(1, 1, 2, 3), nrow=2, byrow = T))
+
 par(mar=c(5,5,2,2))
 plot(NA, xlim=c(0.5,(6+.5)), ylim=c(-1,1),
      axes=F, xlab="", ylab="95% confidence interval of\nthe correlation coefficients", main="Total distance (m)")
@@ -90,24 +112,29 @@ summary(lm(var1 ~ interact.1))
 summary(lm(var1 ~ data$VO2max))
 model <- gam(Total.Distance ~ s(VO2max, by=MFO), data=new_data)
 vis.gam(model, theta = 315, n.grid = 20, lwd = 0.2, color = "gray",
-        zlab = "Total distance (m)")
+        zlab = "Total distance")
 
-model.tree <- rpart(new_data$Total.Distance ~ ., maxdepth = 1, data = new_data[,c(1:3)])
+model.tree <- rpart(data_1$`Total Distance` ~ ., maxdepth = 1, data = data_1[,c(1:3)])
 model.tree
 par(mar=c(4,4,3,2))
-boxplot(new_data$Total.Distance ~ new_data$VO2max>=55.649, xlab="VO2max (ml/min/kg)", ylab="Total Distance (scale)", axes=F, col=c("gray"))
+boxplot(data_1$`Total Distance` ~ new_data$VO2max>=55.565, 
+        xlab=expression(VO2*"max" ~ "(" * mL * "." * min^{-1} * "." * kg^{-1} * ")"), 
+        ylab="Total Distance (m)", axes=F, col=c("gray"))
 axis(2)
 axis(1, at=1:2, labels=c("<55.5",">55.5"))
-segments(x0=1,x1=2,y0=1.3, xpd=NA, lwd=2)
-text(1.5, 1.5, xpd=NA, "***", cex=2)
-t.test(new_data$Total.Distance ~ new_data$VO2max>=55.649)
+segments(x0=1,x1=2,y0=10500, xpd=NA, lwd=2)
+text(1.5, 10700, xpd=NA, "***", cex=2)
+t.test(new_data$Total.Distance ~ new_data$VO2max>=55.565)
+dev.off()
 
 ### HIR
+png("figures/figure2.png", width = 4000, height = 4000, res = 600, type = "cairo")
 layout(matrix(c(1,1,
                 2,3), nrow=2, byrow = T))
 par(mar=c(5,5,2,2))
 plot(NA, xlim=c(0.5,(6+.5)), ylim=c(-1,1),
-     axes=F, xlab="", ylab="95% confidence interval of\nthe correlation coefficients", main="High-Intensity Running (>15km/h)")
+     axes=F, xlab="", ylab="95% confidence interval of\nthe correlation coefficients", 
+     main=expression("High-Intensity Running" ~ "(speed > 15" ~ km * "." * h^{-1} ~ " in meters)"))
 abline(h=0, col="black", lty='dashed')
 axis(2)
 bornes_inf = apply(HIR,2,quantile,probs=.025)
@@ -124,28 +151,35 @@ text(x=1.1:6.1, y=-1.25, c("MFO", "VO2max", "PmaxH", "MFO:VO2max","MFO:PmaxH","V
      xpd=NA, srt=45, pos=2)
 text(c(1, 4, 5), 0.9, c("***", "**", "**"), cex = 2)
 
-par(mar=c(4,4,2,2))
-plot(High.Intensity.Running....15.km.h. ~ MFO, data = new_data,
-     ylab="High-Intensity Running (scale)", xlab="MFO (g/min)")
-abline(lm(High.Intensity.Running....15.km.h. ~ MFO, data = new_data))
-summary(model<-lm(High.Intensity.Running....15.km.h. ~ MFO, data = new_data))
-text(0.7, 1.4, expression(paste(r, ": 0.4, ", r^2, ": 0.16, p=0.006")), cex = 0.8)
+par(mar=c(4,5,3,2))
+plot(data_1$`High Intensity Running (> 15 km/h)` ~ MFO, data = data_1,
+     ylab=expression("High-Intensity Running" ~ "(speed > 15" ~ km * "." * h^{-1} * " in m)"), 
+     xlab=expression("MFO" ~ "(" * g * "." * min^{-1} * ")"))
+
+abline(model<-lm(data_1$`High Intensity Running (> 15 km/h)` ~ MFO, data = data_1))
+cor.test(data_1$`High Intensity Running (> 15 km/h)`, data_1$MFO)
+text(0.6, 1200, expression(paste(r, ": 0.4, ", r^2, ": 0.16, p=0.006")), cex = 0.8, pos = 4)
 
 par(mar=c(4,4,3,2))
-boxplot(new_data$High.Intensity.Running....15.km.h. ~ new_data$MFO>=0.728, ylim=c(-1.2, 1.8),
-        xlab="MFO (g/min)", ylab="High Intensity Running (scale)", axes=F, col=c("gray"))
+boxplot(data_1$`High Intensity Running (> 15 km/h)` ~ data_1$MFO>=0.728, ylim = c(1200, 2600),
+        xlab = expression("MFO" ~ "(" * g * "." * min^{-1} * ")"), 
+        ylab = expression("High-Intensity Running (speed > 15" ~ km * "." * h^{-1} ~ "in m)"), 
+        axes = F, col = c("gray"))
 axis(2)
 axis(1, at = 1:2, labels=c("<0.73",">0.73"))
-segments(x0 = 1, x1 = 2, y0 = 1.6, xpd = NA, lwd = 2)
-text(1.5, 1.8, xpd = NA, "**", cex = 2)
+segments(x0 = 1, x1 = 2, y0 = 2600, xpd = NA, lwd = 2)
+text(1.5, 2700, xpd = NA, "**", cex = 2)
 t.test(var2 ~ new_data$MFO>=0.728)
+dev.off()
 
 # SPRINTING
+png("figures/figure3.png", width = 4000, height = 4000, res = 600, type = "cairo")
 layout(matrix(c(1,1,1,1,
                 2,2,3,4), nrow=2, byrow = T))
 par(mar=c(6,6,2,2))
 plot(NA, xlim=c(0.5,(6+.5)), ylim=c(-1,1),
-     axes=F, xlab="", ylab="95% confidence interval of\nthe correlation coefficients", main="Sprinting (>25 km/h)")
+     axes=F, xlab="", ylab="95% confidence interval of\nthe correlation coefficients", 
+     main=expression("Sprinting (speed > 25" ~ km * "." * h^{-1} ~ "in meters)"))
 abline(h=0, col="black", lty='dashed')
 axis(2)
 bornes_inf = apply(SPRINT,2,quantile,probs=.025)
@@ -166,21 +200,28 @@ summary(lm(var3 ~ new_data$MFO))
 par(mar=c(2,2,2,2))
 model <- gam(Sprinting....25.km.h. ~ s(PmaxH, by=MFO, sp=2), data=new_data)
 vis.gam(model, theta = 320, n.grid = 20, lwd = 0.2, color = "gray",
-        zlab = "Sprinting (> 25 km/h)")
+        zlab = "Sprinting")
 
-par(mar=c(4,4,3,2))
-boxplot(new_data$Sprinting....25.km.h. ~ new_data$MFO>=0.698, xlab="MFO (g/min)", ylab="Sprinting (scale)", axes=F, col=c("grey"))
+par(mar=c(4,4,2,2))
+model.tree <- rpart(data_1$`Sprinting (> 25 km/h)` ~ ., maxdepth = 1, data = data_1[, c(1:3)])
+model.tree
+
+boxplot(data_1$`Sprinting (> 25 km/h)` ~ data_1$MFO>=0.698, 
+        xlab = expression("MFO" ~ "(" * g * "." * min^{-1} * ")"), 
+        ylab = expression("Sprinting (speed > 25" ~ km * "." * h^{-1} ~ "in meters)"), axes=F, col=c("grey"))
 axis(2)
-axis(1, at=1:2, labels=c("<0.7",">0.7"))
-segments(x0=1,x1=2,y0=1.3, xpd=NA, lwd=2)
-text(c(1.5), 1.5, xpd = NA, "p=0.06", cex = 1)
-t.test(new_data$Sprinting....25.km.h. ~ data$MFO>=0.698)
+axis(1, at=1:2, labels=c("<0.7", ">0.7"))
+segments(x0=1,x1=2,y0=290, xpd=NA, lwd=2)
+text(c(1.5), 300, xpd = NA, "*", cex = 1.5)
+wilcox.test(data_1$`Sprinting (> 25 km/h)` ~ data_1$MFO>=0.698)
 
-par(mar=c(4,4,3,2))
-boxplot(new_data$Sprinting....25.km.h. ~ new_data$PmaxH>=18.88, xlab="PmaxH", ylab="Sprinting (scale)", axes=F, col=c("grey"))
+par(mar=c(4,4,2,2))
+boxplot(data_1$`Sprinting (> 25 km/h)` ~ data_1$PmaxH>=18.88, 
+        xlab = expression("PmaxH" ~ "(" * W * "." * kg^{-1} * ")"), 
+        ylab = expression("Sprinting (speed > 25" ~ km * "." * h^{-1} ~ "in meters)"), axes=F, col=c("grey"))
 axis(2)
 axis(1, at = 1:2, labels = c("<19",">19"))
-segments(x0 = 1, x1 = 2, y0 = 1.3, xpd = NA, lwd = 2)
-text(c(1.5), 1.5, xpd=NA, "p=0.10", cex = 1)
-t.test(new_data$Sprinting....25.km.h. ~ new_data$PmaxH>=18.88)
-
+segments(x0 = 1, x1 = 2, y0 = 290, xpd = NA, lwd = 2)
+text(c(1.5), 300, xpd=NA, "p=0.10", cex = 1)
+wilcox.test(data_1$`Sprinting (> 25 km/h)` ~ data_1$PmaxH>=18.88)
+dev.off()
